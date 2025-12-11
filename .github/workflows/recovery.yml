@@ -44,37 +44,31 @@ jobs:
       run: |
         mkdir work
         cd work
-        # Android 12.1 (TWRP 12.1) tabanı
         repo init -u https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp.git -b twrp-12.1 --depth=1
         repo sync -j$(nproc --all) --force-sync
 
     - name: Cihaz Ağacını Klonla
       run: |
         cd work
-        # Önce klasör yolunu oluşturuyoruz
         mkdir -p device/xiaomi
-        # Unified branch'ini özellikle belirtip çekiyoruz
         git clone -b android-12.1-unified https://github.com/HeliumStudio-Dev/twrp_device_xiaomi_raphael device/xiaomi/raphael
 
+    # --- EKSİK OLAN KISIM BURASIYDI, ŞİMDİ EKLENDİ ---
     - name: FBE Unified ve MTP Düzeltmeleri
       run: |
         cd work
-        # Değişken tanımlamaları
         RC_FILE="device/xiaomi/raphael/recovery/root/init.recovery.qcom.rc"
         BOARD_CONFIG="device/xiaomi/raphael/BoardConfig.mk"
 
-        # 1. Varsayılan Dili İngilizce Yap (Çince açılmasın)
-        # Eğer dosyada zh_CN varsa en ile değiştir, yoksa dosya sonuna ekle
+        # Dil Ayarı (İngilizce)
         if grep -q "zh_CN" "$BOARD_CONFIG"; then
             sed -i 's/zh_CN/en/g' "$BOARD_CONFIG"
         else
             echo "TW_DEFAULT_LANGUAGE := en" >> "$BOARD_CONFIG"
         fi
 
-        # 2. Format Data Sonrası Klasör Oluşturma (MTP Fix)
-        # init dosyasının sonuna gerekli tetikleyiciyi ekliyoruz
+        # MTP ve Klasör Düzeltmesi
         echo "" >> "$RC_FILE"
-        echo "# MTP FIX ve Klasör Yapısı" >> "$RC_FILE"
         echo "on property:vold.decrypt=trigger_restart_framework" >> "$RC_FILE"
         echo "    mkdir /data/media 0770 media_rw media_rw" >> "$RC_FILE"
         echo "    mkdir /data/media/0 0770 media_rw media_rw" >> "$RC_FILE"
@@ -82,9 +76,8 @@ jobs:
         echo "    chown media_rw media_rw /data/media/0" >> "$RC_FILE"
         echo "    symlink /data/media/0 /sdcard" >> "$RC_FILE"
 
-        # 3. MTP Sürücü Yolu ve Parlaklık Ayarı
         echo "TW_MTP_DEVICE := /dev/mtp_usb" >> "$BOARD_CONFIG"
-        echo "TW_MAX_BRIGHTNESS := 1024" >> "$BOARD_CONFIG"
+    # -----------------------------------------------------
 
     - name: Derlemeyi Başlat
       run: |
@@ -98,5 +91,5 @@ jobs:
     - name: Dosyayı Yükle (Artifacts)
       uses: actions/upload-artifact@v4
       with:
-        name: TWRP-Raphael-Unified
+        name: TWRP-Raphael-Unified-FIXED
         path: work/out/target/product/raphael/*.img
