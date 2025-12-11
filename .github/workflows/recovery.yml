@@ -1,4 +1,4 @@
-name: TWRP Builder for Raphael
+name: TWRP Builder for Raphael (Fork)
 
 on:
   workflow_dispatch:
@@ -13,7 +13,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
-    - name: Disk Alanını Temizle (Clean Up)
+    - name: Disk Alanını Temizle
       uses: easimon/maximize-build-space@master
       with:
         root-reserve-mb: 2048
@@ -34,9 +34,6 @@ jobs:
         curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
         chmod a+x ~/bin/repo
         sudo ln -sf ~/bin/repo /usr/bin/repo
-
-    - name: Git Konfigürasyonu
-      run: |
         git config --global user.name "CI Builder"
         git config --global user.email "ci@example.com"
 
@@ -47,49 +44,23 @@ jobs:
         repo init -u https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp.git -b twrp-12.1 --depth=1
         repo sync -j$(nproc --all) --force-sync
 
-    - name: Cihaz Ağacını Klonla
+    - name: Cihaz Ağacını Klonla (Senin Forkun)
       run: |
         cd work
         mkdir -p device/xiaomi
-        git clone -b android-12.1-unified https://github.com/HeliumStudio-Dev/twrp_device_xiaomi_raphael device/xiaomi/raphael
-
-    # --- EKSİK OLAN KISIM BURASIYDI, ŞİMDİ EKLENDİ ---
-    - name: FBE Unified ve MTP Düzeltmeleri
-      run: |
-        cd work
-        RC_FILE="device/xiaomi/raphael/recovery/root/init.recovery.qcom.rc"
-        BOARD_CONFIG="device/xiaomi/raphael/BoardConfig.mk"
-
-        # Dil Ayarı (İngilizce)
-        if grep -q "zh_CN" "$BOARD_CONFIG"; then
-            sed -i 's/zh_CN/en/g' "$BOARD_CONFIG"
-        else
-            echo "TW_DEFAULT_LANGUAGE := en" >> "$BOARD_CONFIG"
-        fi
-
-        # MTP ve Klasör Düzeltmesi
-        echo "" >> "$RC_FILE"
-        echo "on property:vold.decrypt=trigger_restart_framework" >> "$RC_FILE"
-        echo "    mkdir /data/media 0770 media_rw media_rw" >> "$RC_FILE"
-        echo "    mkdir /data/media/0 0770 media_rw media_rw" >> "$RC_FILE"
-        echo "    chown media_rw media_rw /data/media" >> "$RC_FILE"
-        echo "    chown media_rw media_rw /data/media/0" >> "$RC_FILE"
-        echo "    symlink /data/media/0 /sdcard" >> "$RC_FILE"
-
-        echo "TW_MTP_DEVICE := /dev/mtp_usb" >> "$BOARD_CONFIG"
-    # -----------------------------------------------------
+        # BURAYI KENDİ KULLANICI ADINLA DEĞİŞTİR:
+        git clone -b android-12.1-unified https://github.com/QCerberusQ/twrp_device_xiaomi_raphael device/xiaomi/raphael
 
     - name: Derlemeyi Başlat
       run: |
         cd work
         export ALLOW_MISSING_DEPENDENCIES=true
-        export TW_DEFAULT_LANGUAGE="en"
         . build/envsetup.sh
         lunch twrp_raphael-eng
         mka recoveryimage
 
-    - name: Dosyayı Yükle (Artifacts)
+    - name: Dosyayı Yükle
       uses: actions/upload-artifact@v4
       with:
-        name: TWRP-Raphael-Unified-FIXED
+        name: TWRP-Raphael-Fork-Build
         path: work/out/target/product/raphael/*.img
